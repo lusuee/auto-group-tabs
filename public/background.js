@@ -3,6 +3,7 @@ const DEFAULT_CONFIG = {
   enableAutoGroup: true, // 是否启动自动分组
   enableMerge: true, // 是否自动合并相同tab
   enableShowGroupTitle: true, // 是否显示分组名称
+  enableCollapsed: false, // 是否默认收起分组
   groupTabNum: 1, // 满足多少个tab时才进行分组
   groupStrategy: 2, // 分组策略
   tabTitlePattern: "", // tab名称匹配的规则
@@ -91,7 +92,7 @@ chrome.tabGroups.onRemoved.addListener((group) => {
     if (groupId === group.groupId) {
       map.delete(groupKey);
     }
-  })
+  });
 });
 
 // 监听tab变更事件
@@ -172,8 +173,21 @@ function groupAllTabs() {
     }
   });
 
+  // 获取当前 tab 页，如果 group 后默认收起分组，需要排除当前 tab 所在分组不收起。
+  let activeTabId;
+  if (userConfig.enableCollapsed) {
+    chrome.tabs
+      .query({
+        active: true,
+        lastFocusedWindow: true,
+      })
+      .then((tabs) => {
+        activeTabId = tabs[0].id;
+      });
+  }
+
   chrome.tabs
-    .query({ windowId: chrome.windows.WINDOW_ID_CURRENT, pinned: false,})
+    .query({ windowId: chrome.windows.WINDOW_ID_CURRENT, pinned: false })
     .then((tabs) => {
       const strategy = GROUP_STRATEGY_MAP.get(userConfig.groupStrategy);
       // 按groupTitle分组，key为groupTitle，value为tabs
@@ -187,11 +201,13 @@ function groupAllTabs() {
           tabGroups[groupTitle].push(tab);
         }
       });
+
       // 调用chrome API 进行tabs分组
       for (const groupTitle in tabGroups) {
         const tabIds = tabGroups[groupTitle].map((tab) => tab.id);
+        console.log(tabIds);
         if (tabGroups[groupTitle].length >= userConfig.groupTabNum) {
-          newGroup(tabIds, groupTitle);
+          newGroup(tabIds, groupTitle, activeTabId);
         } else {
           chrome.tabs.ungroup(tabIds);
         }
@@ -222,18 +238,26 @@ function groupTabs(tab, strategy) {
   });
 }
 
-function newGroup(tabIds, title) {
+function newGroup(tabIds, title, activeTabId) {
   chrome.tabs.group({ tabIds }).then((groupId) => {
     GROUP_MAP.set(getGroupKey(title), groupId);
-    if (userConfig.enableShowGroupTitle) {
-      chrome.tabGroups.update(groupId, { title });
+    if (!userConfig.enableShowGroupTitle) {
+      title = "";
     }
+    let collapsed = userConfig.enableCollapsed;
+    if (!activeTabId || (activeTabId && tabIds.indexOf(activeTabId) >= 0)) {
+      collapsed = false;
+    }
+    chrome.tabGroups.update(groupId, {
+      title,
+      collapsed: collapsed,
+    });
   });
 }
 
 function getGroupKey(groupTitle) {
   // GroupKey包含windowId，实现不同window的tab之间的隔离
-  return chrome.windows.WINDOW_ID_CURRENT + ':' + groupTitle;
+  return chrome.windows.WINDOW_ID_CURRENT + ":" + groupTitle;
 }
 
 function getDomain(url) {

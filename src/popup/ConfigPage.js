@@ -26,6 +26,7 @@ class ConfigPage extends React.Component {
       enableAutoGroup: true,
       enableMerge: true,
       enableShowGroupTitle: true,
+      enableCollapsed: false,
       groupStrategy: 2,
       groupTabNum: 1,
       tabTitlePattern: "",
@@ -62,8 +63,8 @@ class ConfigPage extends React.Component {
     chrome.storage.sync.set(newState);
   };
 
-  onEnableShowGroupTitle = (value) => {
-    const newState = { enableShowGroupTitle: value };
+  onEnableCollapsed = (value) => {
+    const newState = { enableCollapsed: value };
     this.setState(newState);
     chrome.storage.sync.set(newState);
   };
@@ -133,6 +134,12 @@ class ConfigPage extends React.Component {
             <Switch
               checked={this.state.enableShowGroupTitle}
               onChange={this.onEnableShowGroupTitle}
+            />
+          </Form.Item>
+          <Form.Item label={this.i18n("enable_collapsed")}>
+            <Switch
+              checked={this.state.enableCollapsed}
+              onChange={this.onEnableCollapsed}
             />
           </Form.Item>
           <Form.Item label={this.i18n("min_number")}>

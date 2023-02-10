@@ -14,4 +14,5 @@ export default {
   input_placeholder: "Empty matches nothing",
   enable_merge: "Merge tabs when group:",
   merge_tip: "Merge tabs with the same url when grouping all tabs",
+  enable_collapsed: "Enable auto collapse group",
 };
