@@ -43,15 +43,11 @@ const secDomainStrategy = {
   },
   querySameTabs: async (tab) => {
     const domain = getSecDomain(tab.url);
-    let tabs;
-    await chrome.tabs
-      .query({
-        windowId: chrome.windows.WINDOW_ID_CURRENT,
-        pinned: false,
-      })
-      .then((allTabs) => {
-        tabs = allTabs.filter((t) => t.url && domain === getSecDomain(t.url));
-      });
+    const allTabs = await chrome.tabs.query({
+      windowId: chrome.windows.WINDOW_ID_CURRENT,
+      pinned: false,
+    });
+    let tabs = allTabs.filter((t) => t.url && domain === getSecDomain(t.url));
     return tabs;
   },
 };
@@ -205,7 +201,6 @@ function groupAllTabs() {
       // 调用chrome API 进行tabs分组
       for (const groupTitle in tabGroups) {
         const tabIds = tabGroups[groupTitle].map((tab) => tab.id);
-        console.log(tabIds);
         if (tabGroups[groupTitle].length >= userConfig.groupTabNum) {
           newGroup(tabIds, groupTitle, activeTabId);
         } else {
@@ -217,6 +212,9 @@ function groupAllTabs() {
 
 function groupTabs(tab, strategy) {
   strategy.querySameTabs(tab).then((tabs) => {
+    if (!tabs.length) {
+      return;
+    }
     const tabIds = tabs.map((t) => t.id);
     // 如果tab数量不满足设置最小数量进行ungroup
     if (tabs.length < userConfig.groupTabNum) {
